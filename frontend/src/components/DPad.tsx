@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Point } from '../types/game';
 
 interface DPadProps {
@@ -6,20 +6,30 @@ interface DPadProps {
 }
 
 export const DPad: React.FC<DPadProps> = ({ onDir }) => {
-  const trigger = (dir: Point) => {
+  const [activeBtn, setActiveBtn] = useState<string | null>(null);
+
+  const handlePress = (dir: Point, name: string, e: React.SyntheticEvent) => {
+    e.preventDefault();
+    setActiveBtn(name);
     if (navigator.vibrate) {
-      try { navigator.vibrate(8); } catch(e) {}
+      try { navigator.vibrate(10); } catch(e) {}
     }
     onDir(dir);
   };
 
+  const handleRelease = () => {
+    setActiveBtn(null);
+  };
+
   return (
-    <div className="dpad-container">
+    <div className="dpad-container" onContextMenu={(e) => e.preventDefault()}>
       <div className="dpad-grid">
         <button
-          className="dpad-btn up"
-          onTouchStart={(e) => { e.preventDefault(); trigger({ x: 0, y: -1 }); }}
-          onClick={() => trigger({ x: 0, y: -1 })}
+          className={`dpad-btn up ${activeBtn === 'up' ? 'pressed' : ''}`}
+          onPointerDown={(e) => handlePress({ x: 0, y: -1 }, 'up', e)}
+          onPointerUp={handleRelease}
+          onPointerLeave={handleRelease}
+          onPointerCancel={handleRelease}
           aria-label="Up"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -28,9 +38,11 @@ export const DPad: React.FC<DPadProps> = ({ onDir }) => {
         </button>
 
         <button
-          className="dpad-btn left"
-          onTouchStart={(e) => { e.preventDefault(); trigger({ x: -1, y: 0 }); }}
-          onClick={() => trigger({ x: -1, y: 0 })}
+          className={`dpad-btn left ${activeBtn === 'left' ? 'pressed' : ''}`}
+          onPointerDown={(e) => handlePress({ x: -1, y: 0 }, 'left', e)}
+          onPointerUp={handleRelease}
+          onPointerLeave={handleRelease}
+          onPointerCancel={handleRelease}
           aria-label="Left"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -39,9 +51,11 @@ export const DPad: React.FC<DPadProps> = ({ onDir }) => {
         </button>
 
         <button
-          className="dpad-btn down"
-          onTouchStart={(e) => { e.preventDefault(); trigger({ x: 0, y: 1 }); }}
-          onClick={() => trigger({ x: 0, y: 1 })}
+          className={`dpad-btn down ${activeBtn === 'down' ? 'pressed' : ''}`}
+          onPointerDown={(e) => handlePress({ x: 0, y: 1 }, 'down', e)}
+          onPointerUp={handleRelease}
+          onPointerLeave={handleRelease}
+          onPointerCancel={handleRelease}
           aria-label="Down"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -50,9 +64,11 @@ export const DPad: React.FC<DPadProps> = ({ onDir }) => {
         </button>
 
         <button
-          className="dpad-btn right"
-          onTouchStart={(e) => { e.preventDefault(); trigger({ x: 1, y: 0 }); }}
-          onClick={() => trigger({ x: 1, y: 0 })}
+          className={`dpad-btn right ${activeBtn === 'right' ? 'pressed' : ''}`}
+          onPointerDown={(e) => handlePress({ x: 1, y: 0 }, 'right', e)}
+          onPointerUp={handleRelease}
+          onPointerLeave={handleRelease}
+          onPointerCancel={handleRelease}
           aria-label="Right"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -65,3 +81,4 @@ export const DPad: React.FC<DPadProps> = ({ onDir }) => {
     </div>
   );
 };
+

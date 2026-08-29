@@ -388,27 +388,32 @@ export const ArenaBoard: React.FC<ArenaBoardProps> = ({
     ctx.restore();
   };
 
-  // Touch Swipe Steering Handler
+  // Zero-Lag Touch Swipe Steering Handler
   const onTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
     touchStartRef.current = { x: t.clientX, y: t.clientY };
   };
 
-  const onTouchEnd = (e: React.TouchEvent) => {
+  const onTouchMove = (e: React.TouchEvent) => {
     if (!touchStartRef.current) return;
-    const t = e.changedTouches[0];
+    const t = e.touches[0];
     const dx = t.clientX - touchStartRef.current.x;
     const dy = t.clientY - touchStartRef.current.y;
     const absDx = Math.abs(dx);
     const absDy = Math.abs(dy);
 
-    if (Math.max(absDx, absDy) > 15) {
+    if (Math.max(absDx, absDy) >= 12) {
       if (absDx > absDy) {
         onSendDir({ x: dx > 0 ? 1 : -1, y: 0 });
       } else {
         onSendDir({ x: 0, y: dy > 0 ? 1 : -1 });
       }
+      // Reset origin to current position so player can chain immediate continuous swipes
+      touchStartRef.current = { x: t.clientX, y: t.clientY };
     }
+  };
+
+  const onTouchEnd = () => {
     touchStartRef.current = null;
   };
 
@@ -417,7 +422,9 @@ export const ArenaBoard: React.FC<ArenaBoardProps> = ({
       ref={wrapRef}
       className={`board-wrap ${gameState?.paused ? 'paused' : ''}`}
       onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchEnd}
     >
       <canvas id="board" ref={canvasRef} />
       <canvas id="fx" ref={fxCanvasRef} />
