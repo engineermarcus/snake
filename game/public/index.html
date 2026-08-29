@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>SNAKE ARENA // Multiplayer Real-Time Battle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- SVG ICON SPRITE -->
+<svg style="display: none;">
+  <defs>
+    <!-- Crown Icon -->
+    <g id="icon-crown">
+      <path d="M2 19h20v2H2v-2zm1.5-12l4.5 5 4-8 4 8 4.5-5 1.5 12H2L3.5 7z" fill="currentColor"/>
+    </g>
+    <!-- Play Icon -->
+    <g id="icon-play">
+      <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+    </g>
+    <!-- Pause Icon -->
+    <g id="icon-pause">
+      <rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/>
+      <rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/>
+    </g>
+    <!-- Settings Gear Icon -->
+    <g id="icon-settings">
+      <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" fill="currentColor"/>
+      <path fill-rule="evenodd" d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" clip-rule="evenodd" fill="currentColor"/>
+    </g>
+    <!-- Chat Icon -->
+    <g id="icon-chat">
+      <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <!-- Mic Icon -->
+    <g id="icon-mic">
+      <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" fill="currentColor"/>
+      <path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <!-- Mic Off Icon -->
+    <g id="icon-mic-off">
+      <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M17 16.95A7 7 0 015 12v-2m14 0v2a7 7 0 01-.11 1.23M12 19v4M8 23h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <!-- Copy Icon -->
+    <g id="icon-copy">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <!-- Close Icon -->
+    <g id="icon-close">
+      <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <!-- Send Icon -->
+    <g id="icon-send">
+      <line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor"/>
+    </g>
+    <!-- Arrow Icons for DPAD -->
+    <g id="icon-arrow-up">
+      <path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g id="icon-arrow-down">
+      <path d="M12 5v14M19 12l-7 7-7-7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g id="icon-arrow-left">
+      <path d="M19 12H5M12 19l-7-7 7-7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g id="icon-arrow-right">
+      <path d="M5 12h14M12 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <!-- Volume / Speaker Icon -->
+    <g id="icon-speaker">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/>
+      <path d="M15.54 8.46a5 5 0 010 7.07" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+  </defs>
+</svg>
+
+<!-- ===== LOBBY SCREEN ===== -->
+<div id="lobby">
+  <div class="lobby-card">
+    <div class="brand-header">
+      <div class="brand-badge">
+        <span class="live-pulse"></span> MULTIPLAYER ARENA
+      </div>
+      <h1 class="brand-title">SNAKE<span>ARENA</span></h1>
+      <p class="brand-subtitle">Fast-paced competitive multiplayer battle</p>
+    </div>
+
+    <div class="lobby-form">
+      <div class="input-group">
+        <label for="playerName" class="field-label">PLAYER HANDLE</label>
+        <div class="input-wrapper">
+          <input id="playerName" type="text" maxlength="16" placeholder="Enter your nickname" autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+
+      <div class="input-group">
+        <div class="label-row">
+          <label class="field-label">SNAKE COLOR</label>
+          <span class="red-restriction-badge">
+            <span class="dot-red"></span> Red is ball-only
+          </span>
+        </div>
+        <div id="colorPicker" class="color-picker-grid"></div>
+      </div>
+
+      <div class="action-divider"><span>OR</span></div>
+
+      <button id="createBtn" class="btn-cta">
+        <svg class="btn-icon" viewBox="0 0 24 24"><use href="#icon-crown"></use></svg>
+        <span>CREATE NEW MATCH</span>
+      </button>
+
+      <div class="join-box">
+        <span class="join-label">HAVE A MATCH CODE?</span>
+        <div class="join-row">
+          <input id="codeInput" type="text" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false">
+          <button id="joinBtn" class="btn-join">JOIN</button>
+        </div>
+      </div>
+
+      <div id="lobbyError" class="error-banner hidden"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== GAME SCREEN ===== -->
+<div id="gameScreen" class="hidden">
+  <div id="appContainer">
+
+    <!-- TOP NAVIGATION BAR / HUD -->
+    <header id="topBar">
+      <div class="bar-left">
+        <div id="timer" class="hud-pill timer-pill" title="Match Time Remaining">03:00</div>
+        <div class="latency-indicator" title="Network Connection Status">
+          <span id="pingDot" class="ping-dot"></span>
+          <span id="status">Connecting…</span>
+        </div>
+      </div>
+
+      <div class="bar-right">
+        <!-- Room code with copy icon -->
+        <button id="roomCodeBtn" class="hud-pill room-pill" title="Click to copy room code & invite link">
+          <span class="room-label">ROOM</span>
+          <strong id="roomCode">----</strong>
+          <svg class="pill-icon" viewBox="0 0 24 24"><use href="#icon-copy"></use></svg>
+        </button>
+
+        <!-- Action buttons with clean SVG icons -->
+        <button id="pauseBtn" class="icon-btn hidden" title="Pause / Resume Match (Admin)" aria-label="Pause">
+          <svg id="pauseIcon" class="svg-icon" viewBox="0 0 24 24"><use href="#icon-pause"></use></svg>
+        </button>
+        <button id="settingsBtn" class="icon-btn" title="Match Settings" aria-label="Settings">
+          <svg class="svg-icon" viewBox="0 0 24 24"><use href="#icon-settings"></use></svg>
+        </button>
+        <button id="chatToggle" class="icon-btn" title="In-Game Chat" aria-label="Chat">
+          <svg id="chatIcon" class="svg-icon" viewBox="0 0 24 24"><use href="#icon-chat"></use></svg>
+          <span id="chatBadge" class="unread-dot hidden"></span>
+        </button>
+        <button id="voiceBtn" class="icon-btn" title="Toggle Voice Chat" aria-label="Voice">
+          <svg id="voiceIcon" class="svg-icon" viewBox="0 0 24 24"><use href="#icon-mic"></use></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- LIVE SCOREBOARD CHIPS -->
+    <div id="scoreboard" class="scoreboard-strip"></div>
+
+    <!-- MAIN ARENA & COMMS WORKSPACE -->
+    <main id="arenaWorkspace">
+      
+      <!-- BOARD WRAPPER -->
+      <div id="board-wrap">
+        <canvas id="board" width="600" height="600"></canvas>
+        <div id="msg"></div>
+        <canvas id="fx" width="600" height="600"></canvas>
+      </div>
+
+      <!-- COMMS & CHAT SIDEBAR / DRAWER -->
+      <aside id="chatPanel" class="hidden">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg class="panel-icon" viewBox="0 0 24 24"><use href="#icon-chat"></use></svg>
+            <span>LIVE COMMS</span>
+          </div>
+          <button id="chatCloseBtn" class="btn-ghost" aria-label="Close Chat">
+            <svg class="svg-icon-sm" viewBox="0 0 24 24"><use href="#icon-close"></use></svg>
+          </button>
+        </div>
+
+        <div id="voiceStatus" class="voice-strip"></div>
+        
+        <div id="chatLog" class="chat-stream"></div>
+        
+        <div id="chatInputRow" class="chat-input-bar">
+          <input id="chatInput" type="text" maxlength="200" placeholder="Type in-game message…" autocomplete="off" spellcheck="false">
+          <button id="chatSend" class="btn-send" title="Send message">
+            <svg class="svg-icon-sm" viewBox="0 0 24 24"><use href="#icon-send"></use></svg>
+          </button>
+        </div>
+      </aside>
+
+    </main>
+
+    <!-- CONTROLS & INFO BAR -->
+    <footer id="bottomBar">
+      <div class="player-tag">
+        <span class="you-are"></span>
+      </div>
+      <div class="keyboard-hints">
+        <span class="hint-label">Controls:</span>
+        <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd>
+      </div>
+    </footer>
+
+    <!-- MOBILE ON-SCREEN TOUCH DPAD CONTROLLER (HIDDEN ON DESKTOP) -->
+    <div id="dpad" class="dpad-container">
+      <div class="dpad-grid">
+        <button data-dir="up" class="dpad-btn up" aria-label="Move Up">
+          <svg viewBox="0 0 24 24"><use href="#icon-arrow-up"></use></svg>
+        </button>
+        <button data-dir="left" class="dpad-btn left" aria-label="Move Left">
+          <svg viewBox="0 0 24 24"><use href="#icon-arrow-left"></use></svg>
+        </button>
+        <button data-dir="down" class="dpad-btn down" aria-label="Move Down">
+          <svg viewBox="0 0 24 24"><use href="#icon-arrow-down"></use></svg>
+        </button>
+        <button data-dir="right" class="dpad-btn right" aria-label="Move Right">
+          <svg viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
+        </button>
+        <div class="dpad-center"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div id="settingsModal" class="modal-backdrop hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg class="modal-icon" viewBox="0 0 24 24"><use href="#icon-settings"></use></svg>
+        <h3>MATCH SETTINGS</h3>
+      </div>
+      <button id="closeSettingsX" class="btn-ghost" aria-label="Close">
+        <svg class="svg-icon-sm" viewBox="0 0 24 24"><use href="#icon-close"></use></svg>
+      </button>
+    </div>
+    
+    <p id="adminStatusNotice" class="modal-hint">Only the match admin can apply changes.</p>
+    
+    <div class="modal-body">
+      <label class="modal-label" for="matchSecondsInput">
+        <span>MATCH DURATION (SECONDS)</span>
+        <input type="number" id="matchSecondsInput" min="30" max="1800" step="30" value="180">
+      </label>
+    </div>
+
+    <div class="modal-actions">
+      <button id="applySettings" class="btn-primary">Apply Settings</button>
+      <button id="closeSettings" class="btn-secondary">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST NOTIFICATION -->
+<div id="toast" class="toast-popup hidden"></div>
+
+<script src="game.js"></script>
+</body>
+</html>
