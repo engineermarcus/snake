@@ -3,9 +3,17 @@ const http = require('http');
 const { WebSocketServer } = require('ws');
 const path = require('path');
 const crypto = require('crypto');
+const cors = require('cors');
 
 const app = express();
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(cors());
+app.use(express.json());
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime(), roomsCount: Object.keys(rooms).length });
+});
+
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, perMessageDeflate: false });
 
@@ -42,38 +50,28 @@ function sanitizeColor(c) {
   return c;
 }
 
-// Preset definitions for match configurations
 const DEFAULT_MODIFIERS = {
-  // Movement & Space
-  portalWalls: true,          // Wrap around edges with trail color shift
-  gravityWells: true,         // Drifting orbital singularities
-  shrinkingArena: false,      // Battle Royale contracting storm
-  teleportTiles: true,        // Paired warp tiles
-  oneWayCorridors: false,     // Directional flow zones
-  elasticTether: false,       // Invisible tether pulling pairs together
-  
-  // Growth & Length
-  inverseMode: false,         // Periodic 60s win condition flip
-  detachableTail: true,       // Drop 30% tail as mine obstacle (Key E)
-  segmentedOwnership: true,   // Severed tail pieces collectible
-  decayMode: false,           // Continuous length decay if not eating
-  
-  // Fusion & Social
-  symbioteFusion: true,       // Head-on merge into 2-headed snake for 10s
-  packBonding: true,          // Close proximity grants speed & shield
-  
-  // Perception & Warfare
-  fogOfWar: false,            // Limited vision radius
-  colorReshuffle: false,      // Periodic avatar color switch
-  mirroredCurse: true,        // Random 12s inverted controls curse
-  fakeFood: true,             // Poison decoy food
-  
-  // Meta & Physics
-  chaosCards: true,           // Periodic chaos event card draws
-  leaderboardCurse: true,     // Top player gets speed handicap
-  zLayers: true,              // 3D Z-Layer elevation jumping (Key Z)
-  bumperPhysics: false,       // Bumper car bounce on head collisions
-  weatherSystem: true         // Periodic wind drift & slippery ice patches
+  portalWalls: true,
+  gravityWells: true,
+  shrinkingArena: false,
+  teleportTiles: true,
+  oneWayCorridors: false,
+  elasticTether: false,
+  inverseMode: false,
+  detachableTail: true,
+  segmentedOwnership: true,
+  decayMode: false,
+  symbioteFusion: true,
+  packBonding: true,
+  fogOfWar: false,
+  colorReshuffle: false,
+  mirroredCurse: true,
+  fakeFood: true,
+  chaosCards: true,
+  leaderboardCurse: true,
+  zLayers: true,
+  bumperPhysics: false,
+  weatherSystem: true
 };
 
 const rooms = {};
@@ -88,22 +86,22 @@ function genCode() {
 }
 
 function makeRoom(code) {
-  const room = {
+  return {
     code,
     adminId: null,
-    players: {},      // id -> { token, ws, connected, color, name, disconnectTimer }
-    snakes: {},       // id -> snake state
+    players: {},
+    snakes: {},
     food: spawnFood(GRID),
-    fakeFoods: [],    // Poison decoy food items
-    mines: [],        // { x, y, owner, color, createdAt }
-    severedChunks: [],// { x, y, value, color }
+    fakeFoods: [],
+    mines: [],
+    severedChunks: [],
     teleporters: spawnTeleporters(GRID),
     gravityWells: [spawnGravityWell(GRID)],
     icePatches: spawnIcePatches(GRID),
     oneWayCorridors: spawnOneWayCorridors(GRID),
     storm: { active: false, radius: GRID / 2, center: { x: GRID / 2, y: GRID / 2 }, damageTick: 0 },
     weather: { wind: { x: 0, y: 0 }, timer: 0 },
-    chaosCard: null,  // Current active chaos event
+    chaosCard: null,
     chaosTimer: 0,
     inverseModeActive: false,
     inverseTimer: 60,
@@ -118,10 +116,8 @@ function makeRoom(code) {
     seq: 0,
     tickCount: 0
   };
-  return room;
 }
 
-// ---- Spatial Spawners ----
 function spawnFood(grid, occupied = new Set()) {
   for (let i = 0; i < 100; i++) {
     const x = Math.floor(Math.random() * grid);
@@ -192,15 +188,15 @@ function newSnake(room) {
     score: 0,
     grow: 0,
     dead: false,
-    zLayer: 0,             // 0: Ground, 1: Elevated 3D layer
+    zLayer: 0,
     zCooldown: 0,
-    shield: 0,             // Shield counter from pack bonding
-    curseTimer: 0,         // Mirrored controls duration
+    shield: 0,
+    curseTimer: 0,
     isMirrored: false,
-    fusedWith: null,       // Symbiote partner ID
+    fusedWith: null,
     fusedTimer: 0,
-    wrapCount: 0,          // Portal wall wrap counter
-    lastUnfusedFrom: null, // For betrayal bonus
+    wrapCount: 0,
+    lastUnfusedFrom: null,
     unfusedGrace: 0
   };
 }
@@ -220,7 +216,6 @@ function respawnSnake(room, id) {
   room.snakes[id].isMirrored = false;
 }
 
-// ---- Broadcast helpers ----
 function broadcast(room, msg) {
   const data = JSON.stringify(msg);
   for (const ws of room.sockets) {
@@ -290,7 +285,6 @@ function broadcastState(room) {
   broadcast(room, { type: 'state', seq: room.seq, game: publicGame(room) });
 }
 
-// ---- Loop & Timer control ----
 function startLoopIfReady(room) {
   if (canStart(room) && !room.loopHandle && !room.paused) {
     room.running = true;
@@ -390,13 +384,11 @@ function resetMatch(room) {
   room.chaosCard = null;
 }
 
-// ---- MAIN TICK LOOP ENGINE (28 MODIFIERS) ----
 function tick(room) {
   room.tickCount++;
   const m = room.modifiers;
   const ids = Object.keys(room.snakes).filter(id => !room.snakes[id].dead);
 
-  // 1. Inverse Mode Timer (60s cycle flip)
   if (m.inverseMode) {
     room.inverseTimer--;
     if (room.inverseTimer <= 0) {
@@ -410,7 +402,6 @@ function tick(room) {
     }
   }
 
-  // 2. Chaos Card Draws (Every 45 ticks ~ 12s)
   if (m.chaosCards) {
     room.chaosTimer = (room.chaosTimer || 0) + 1;
     if (room.chaosTimer >= 45) {
@@ -427,7 +418,6 @@ function tick(room) {
     }
   }
 
-  // 3. Gravity Wells Motion & Pull
   if (m.gravityWells && room.gravityWells.length) {
     room.gravityWells.forEach(gw => {
       gw.x += gw.vx;
@@ -437,7 +427,6 @@ function tick(room) {
     });
   }
 
-  // 4. Shrinking Arena Storm
   if (m.shrinkingArena) {
     room.storm.active = true;
     if (room.storm.radius > 6 && room.tickCount % 10 === 0) {
@@ -445,25 +434,21 @@ function tick(room) {
     }
   }
 
-  // 5. Weather System Wind Shift
   if (m.weatherSystem && room.tickCount % 40 === 0) {
     const winds = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }];
     room.weather.wind = winds[Math.floor(Math.random() * winds.length)];
   }
 
-  // 6. Fake Food Spawn (Occasional Poison Decoys)
   if (m.fakeFood && room.fakeFoods.length < 2 && Math.random() < 0.08) {
     const occupied = new Set();
     for (const id of ids) room.snakes[id].body.forEach(c => occupied.add(`${c.x},${c.y}`));
     room.fakeFoods.push(spawnFood(GRID, occupied));
   }
 
-  // 7. Calculate Next Head Positions
   const nextHeads = {};
   for (const id of ids) {
     const s = room.snakes[id];
     
-    // Decrement timers
     if (s.zCooldown > 0) s.zCooldown--;
     if (s.curseTimer > 0) {
       s.curseTimer--;
@@ -473,13 +458,12 @@ function tick(room) {
       s.fusedTimer--;
       if (s.fusedTimer === 0 && s.fusedWith) {
         s.lastUnfusedFrom = s.fusedWith;
-        s.unfusedGrace = 20; // 20 ticks betrayal bonus window
+        s.unfusedGrace = 20;
         s.fusedWith = null;
       }
     }
     if (s.unfusedGrace > 0) s.unfusedGrace--;
 
-    // Direction calculation (handling mirrored controls curse)
     let appliedDir = s.nextDir;
     if (s.isMirrored) {
       appliedDir = { x: -appliedDir.x, y: -appliedDir.y };
@@ -490,7 +474,6 @@ function tick(room) {
     let nx = head.x + s.dir.x;
     let ny = head.y + s.dir.y;
 
-    // Gravity well subtle pull
     if (m.gravityWells) {
       room.gravityWells.forEach(gw => {
         const dist = Math.hypot(gw.x - head.x, gw.y - head.y);
@@ -503,7 +486,6 @@ function tick(room) {
       });
     }
 
-    // Portal Walls Wrap-Around vs Border Collision
     if (m.portalWalls) {
       if (nx < 0) { nx = GRID - 1; s.wrapCount++; }
       else if (nx >= GRID) { nx = 0; s.wrapCount++; }
@@ -514,7 +496,6 @@ function tick(room) {
     nextHeads[id] = { x: Math.round(nx), y: Math.round(ny) };
   }
 
-  // 8. Teleport Tiles Step
   if (m.teleportTiles) {
     for (const id of ids) {
       const nh = nextHeads[id];
@@ -530,10 +511,8 @@ function tick(room) {
     }
   }
 
-  // 9. Collisions & Deaths Evaluation
   const deaths = new Map();
 
-  // Wall collisions (if Portal Walls disabled)
   if (!m.portalWalls) {
     for (const id of ids) {
       const nh = nextHeads[id];
@@ -543,7 +522,6 @@ function tick(room) {
     }
   }
 
-  // Storm damage outside boundary
   if (m.shrinkingArena && room.storm.active) {
     for (const id of ids) {
       const nh = nextHeads[id];
@@ -558,7 +536,6 @@ function tick(room) {
     }
   }
 
-  // Detachable Tail Mines Trigger
   if (m.detachableTail && room.mines.length) {
     for (const id of ids) {
       const nh = nextHeads[id];
@@ -573,30 +550,24 @@ function tick(room) {
     }
   }
 
-  // Self Collision & Snake vs Snake Collision (Considering 3D Z-Layers & Symbiote Fusion)
   for (const id of ids) {
     if (deaths.has(id)) continue;
     const s = room.snakes[id];
     const nh = nextHeads[id];
 
-    // Self hit (same zLayer)
     if (s.body.some(seg => seg.x === nh.x && seg.y === nh.y)) {
       deaths.set(id, { creditTo: null });
       continue;
     }
 
-    // Snake vs other snake
     for (const oid of ids) {
       if (oid === id || deaths.has(oid)) continue;
       const other = room.snakes[oid];
       const otherNH = nextHeads[oid];
 
-      // If snakes are on different 3D Z-Layers, they pass right over each other safely!
       if (m.zLayers && s.zLayer !== other.zLayer) continue;
 
-      // Head-on collision
       if (otherNH && otherNH.x === nh.x && otherNH.y === nh.y) {
-        // Symbiote Fusion Mode: merge into double-headed snake for 10s!
         if (m.symbioteFusion && !s.fusedWith && !other.fusedWith) {
           s.fusedWith = oid;
           other.fusedWith = id;
@@ -608,7 +579,6 @@ function tick(room) {
           continue;
         }
 
-        // Bumper Physics Mode: bounce back instead of death
         if (m.bumperPhysics) {
           s.dir = { x: -s.dir.x, y: -s.dir.y };
           other.dir = { x: -other.dir.x, y: -other.dir.y };
@@ -621,16 +591,13 @@ function tick(room) {
         continue;
       }
 
-      // Hit opponent's body
       if (other.body.some(seg => seg.x === nh.x && seg.y === nh.y)) {
-        // Pack bonding shield protects from 1 hit!
         if (s.shield > 0) {
           s.shield = 0;
           broadcast(room, { type: 'shieldPopped', player: id });
           continue;
         }
 
-        // Betrayal Bonus Check: killed recently unfused partner
         let creditScore = 1;
         if (s.lastUnfusedFrom === oid && s.unfusedGrace > 0) {
           creditScore = 3;
@@ -642,10 +609,8 @@ function tick(room) {
     }
   }
 
-  // Execute Deaths & Spawn Severed Nutrient Chunks
   for (const [id, info] of deaths) {
     if (m.segmentedOwnership && room.snakes[id]) {
-      // Turn dead snake body into collectible nutrient chunks
       room.snakes[id].body.slice(1).forEach(seg => {
         if (Math.random() < 0.6) {
           room.severedChunks.push({ x: seg.x, y: seg.y, color: room.players[id] ? room.players[id].color : '#4dff88' });
@@ -656,14 +621,12 @@ function tick(room) {
     killSnake(room, id, info.creditTo, info.bonus || 1);
   }
 
-  // 10. Update Alive Snakes Positions & Eating
   for (const id of ids) {
     if (deaths.has(id)) continue;
     const s = room.snakes[id];
     const nh = nextHeads[id];
     s.body.unshift(nh);
 
-    // Eating Normal Food Ball
     if (nh.x === room.food.x && nh.y === room.food.y) {
       if (m.inverseMode && room.inverseModeActive) {
         s.score -= 1;
@@ -674,7 +637,6 @@ function tick(room) {
       }
       room.food = spawnFood(GRID);
     } 
-    // Eating Poison Decoy Fake Food
     else if (m.fakeFood && room.fakeFoods.some(f => f.x === nh.x && f.y === nh.y)) {
       const idx = room.fakeFoods.findIndex(f => f.x === nh.x && f.y === nh.y);
       if (idx !== -1) room.fakeFoods.splice(idx, 1);
@@ -682,26 +644,22 @@ function tick(room) {
       if (s.body.length > 2) s.body.pop();
       broadcast(room, { type: 'fakeFoodEaten', player: id });
     }
-    // Eating Severed Nutrient Chunks
     else if (m.segmentedOwnership && room.severedChunks.some(c => c.x === nh.x && c.y === nh.y)) {
       const cIdx = room.severedChunks.findIndex(c => c.x === nh.x && c.y === nh.y);
       if (cIdx !== -1) room.severedChunks.splice(cIdx, 1);
       s.score += 1;
       s.grow += 1;
     }
-    // Normal movement pop tail
     else if (s.grow > 0) {
       s.grow -= 1;
     } else {
       s.body.pop();
     }
 
-    // Decay Mode: slowly lose 1 segment every 25 ticks unless eating
     if (m.decayMode && room.tickCount % 25 === 0 && s.body.length > 2) {
       s.body.pop();
     }
 
-    // Pack Bonding: Check if moving in close formation with allies
     if (m.packBonding) {
       const hasCloseAlly = ids.some(otherId => {
         if (otherId === id) return false;
@@ -742,7 +700,6 @@ function cleanupRoomIfEmpty(code) {
   }
 }
 
-// ---- WebSocket Connection Handling ----
 wss.on('connection', (ws) => {
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
@@ -751,7 +708,6 @@ wss.on('connection', (ws) => {
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
 
-    // CREATE ROOM
     if (msg.type === 'createRoom') {
       const code = genCode();
       rooms[code] = makeRoom(code);
@@ -759,12 +715,11 @@ wss.on('connection', (ws) => {
       return;
     }
 
-    // JOIN ROOM
     if (msg.type === 'joinRoom') {
       const code = (msg.code || '').toUpperCase().trim();
       const room = rooms[code];
       if (!room) {
-        sendTo(ws, { type: 'error', reason: 'Room not found. Check the code or create a match.' });
+        sendTo(ws, { type: 'error', reason: 'Room not found. Check code.' });
         return;
       }
 
@@ -856,7 +811,6 @@ wss.on('connection', (ws) => {
     const room = ws.roomCode ? rooms[ws.roomCode] : null;
     if (!room) return;
 
-    // Movement Steering
     if (msg.type === 'dir' && ws.playerId && room.snakes[ws.playerId]) {
       const s = room.snakes[ws.playerId];
       if (s.dead) return;
@@ -868,18 +822,16 @@ wss.on('connection', (ws) => {
       return;
     }
 
-    // 3D Z-Layer Elevation Jump (Modifier #25)
     if (msg.type === 'toggleZ' && ws.playerId && room.snakes[ws.playerId] && room.modifiers.zLayers) {
       const s = room.snakes[ws.playerId];
       if (s.zCooldown === 0) {
         s.zLayer = s.zLayer === 0 ? 1 : 0;
-        s.zCooldown = 15; // cooldown
+        s.zCooldown = 15;
         broadcast(room, { type: 'zLayerShift', player: ws.playerId, zLayer: s.zLayer });
       }
       return;
     }
 
-    // Detachable Tail Mine Drop (Modifier #8)
     if (msg.type === 'dropMine' && ws.playerId && room.snakes[ws.playerId] && room.modifiers.detachableTail) {
       const s = room.snakes[ws.playerId];
       if (s.body.length >= 5) {
@@ -892,7 +844,6 @@ wss.on('connection', (ws) => {
       return;
     }
 
-    // Update Match Modifiers & Settings (Admin Only)
     if (msg.type === 'setModifiers' && ws.playerId === room.adminId) {
       if (msg.modifiers && typeof msg.modifiers === 'object') {
         room.modifiers = { ...room.modifiers, ...msg.modifiers };
@@ -917,7 +868,6 @@ wss.on('connection', (ws) => {
     if (msg.type === 'adminPause' && ws.playerId === room.adminId) { adminPause(room); return; }
     if (msg.type === 'adminResume' && ws.playerId === room.adminId) { adminResume(room); return; }
 
-    // Text Chat
     if (msg.type === 'chat' && ws.playerId) {
       const p = room.players[ws.playerId];
       if (!p) return;
@@ -933,7 +883,6 @@ wss.on('connection', (ws) => {
       return;
     }
 
-    // WebRTC Voice Signaling
     if (msg.type === 'rtcOffer' || msg.type === 'rtcAnswer' || msg.type === 'rtcIce') {
       const target = msg.to;
       const targetPlayer = room.players[target];
