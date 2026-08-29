@@ -75,6 +75,7 @@ export const App: React.FC = () => {
           setRoomCode(msg.code);
           setInGame(true);
           socketService.setToken(msg.token);
+          socketService.send({ type: 'rtcPeers' });
           break;
 
         case 'spectator':
@@ -82,6 +83,7 @@ export const App: React.FC = () => {
           setRoomCode(msg.code);
           setInGame(true);
           showToast('Spectating match (room full)');
+          socketService.send({ type: 'rtcPeers' });
           break;
 
         case 'state':
@@ -133,6 +135,9 @@ export const App: React.FC = () => {
             text: msg.connected ? `${pname} joined the arena.` : `${pname} left.`,
             isSystem: true
           }]);
+          if (msg.connected) {
+            socketService.send({ type: 'rtcPeers' });
+          }
           break;
 
         case 'pong':
@@ -140,17 +145,20 @@ export const App: React.FC = () => {
           break;
 
         case 'rtcPeers':
-          if (isVoiceActive) {
-            for (const pid of msg.peers) webrtcService.initiatePeer(pid);
+          for (const pid of msg.peers) {
+            webrtcService.initiatePeer(pid);
           }
+          setVoicePeers([...webrtcService.getActivePeers()]);
           break;
 
         case 'rtcOffer':
-          if (isVoiceActive) webrtcService.handleOffer(msg);
+          webrtcService.handleOffer(msg);
+          setVoicePeers([...webrtcService.getActivePeers()]);
           break;
 
         case 'rtcAnswer':
           webrtcService.handleAnswer(msg);
+          setVoicePeers([...webrtcService.getActivePeers()]);
           break;
 
         case 'rtcIce':
@@ -159,10 +167,12 @@ export const App: React.FC = () => {
 
         case 'rtcPeerLeft':
           webrtcService.closePeer(msg.peer);
+          setVoicePeers([...webrtcService.getActivePeers()]);
           break;
       }
     });
 
+    (window as any)._appShowToast = showToast;
     return () => unsubscribe();
   }, [myPlayerId, myName, isChatOpen, isVoiceActive, showToast, showGameMsg]);
 
@@ -189,11 +199,16 @@ export const App: React.FC = () => {
 
   // Voice Chat
   const toggleVoice = async () => {
-    const active = await webrtcService.toggle(() => {
+    webrtcService.resumeAudioContext();
+    const res = await webrtcService.toggleMic(() => {
       setVoicePeers([...webrtcService.getActivePeers()]);
     });
-    setIsVoiceActive(active);
-    showToast(active ? 'Voice chat enabled' : 'Voice chat muted');
+    setIsVoiceActive(res.active);
+    if (res.error) {
+      showToast(res.error, 4500);
+    } else {
+      showToast(res.active ? '🎙️ Microphone LIVE (Everyone can hear you)' : '🔇 Microphone Muted');
+    }
   };
 
   // Keyboard Event Handlers for Desktop

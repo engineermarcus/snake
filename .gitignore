@@ -4,6 +4,11 @@ frontend/node_modules/
 frontend/dist/
 .DS_Store
 *.log
-frontend/android/
 android/
 ios/
+.gradle/
+**/build/
+*.apk
+*.aab
+local.properties
+.idea/

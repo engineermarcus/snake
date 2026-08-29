@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage, SnakeState } from '../types/game';
+import { webrtcService } from '../services/webrtc';
 
 interface ChatPanelProps {
   isOpen: boolean;
@@ -58,21 +59,57 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
       {(voiceActive || voicePeers.length > 0) && (
         <div className="voice-strip">
-          {voiceActive && (
-            <span className="voice-peer" style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}>
-              🎙️ <span>You</span>
-            </span>
-          )}
-          {voicePeers.map(pid => {
-            const p = snakes[pid];
-            const pcolor = p ? p.color : 'var(--text-muted)';
-            const pname = p ? p.name : pid.slice(-4);
-            return (
-              <span key={pid} className="voice-peer" style={{ borderColor: pcolor, color: pcolor }}>
-                🔊 <span>{pname}</span>
-              </span>
-            );
-          })}
+          <div className="voice-header-row">
+            <span className="voice-label">VOICE ARENA</span>
+            {voicePeers.length > 0 && (
+              <button
+                className={`btn-deafen ${webrtcService.isUserDeafened() ? 'deafened' : ''}`}
+                onClick={() => {
+                  const deaf = webrtcService.toggleDeafen();
+                  (window as any)._appShowToast?.(deaf ? '🔇 Deafened (Incoming audio muted)' : '🔊 Undeafened (Listening to voice)');
+                }}
+                title={webrtcService.isUserDeafened() ? 'Un-deafen (listen to voice)' : 'Deafen (mute all voice audio)'}
+              >
+                {webrtcService.isUserDeafened() ? '🔇 Deafened' : '🔊 Deafen All'}
+              </button>
+            )}
+          </div>
+
+          <div className="voice-peer-list">
+            {voiceActive && (
+              <div className="voice-peer my-voice" style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}>
+                <span>🎙️ You (Live)</span>
+              </div>
+            )}
+            {voicePeers.map(pid => {
+              const p = snakes[pid];
+              const pcolor = p ? p.color : 'var(--text-muted)';
+              const pname = p ? p.name : pid.slice(-4);
+              const isMutedByMe = webrtcService.isPeerMuted(pid);
+
+              return (
+                <div
+                  key={pid}
+                  className={`voice-peer ${isMutedByMe ? 'peer-muted' : ''}`}
+                  style={{ borderColor: pcolor, color: pcolor }}
+                >
+                  <span className="peer-name">
+                    {isMutedByMe ? '🔇' : '🔊'} {pname}
+                  </span>
+                  <button
+                    className="peer-mute-btn"
+                    onClick={() => {
+                      const muted = webrtcService.toggleMutePeer(pid);
+                      (window as any)._appShowToast?.(muted ? `Muted ${pname} for yourself` : `Unmuted ${pname}`);
+                    }}
+                    title={isMutedByMe ? `Unmute ${pname}` : `Mute ${pname} (only for you)`}
+                  >
+                    {isMutedByMe ? 'Unmute' : 'Mute'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

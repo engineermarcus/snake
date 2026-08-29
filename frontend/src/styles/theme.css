@@ -298,9 +298,83 @@ canvas#fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-eve
 .panel-title { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: var(--text-muted); }
 .btn-ghost { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; }
 .btn-ghost:hover { color: var(--text-main); }
-.voice-strip { padding: 6px 10px; font-size: 11px; color: var(--text-muted); border-bottom: 1px solid var(--border-color); min-height: 28px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: rgba(0, 0, 0, 0.15); }
-.voice-peer { padding: 2px 7px; border: 1px solid currentColor; border-radius: var(--radius-full); font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
-.voice-peer.speaking { background: rgba(16, 185, 129, 0.2); box-shadow: 0 0 10px var(--primary-glow); }
+/* Chat Voice Strip & Controls */
+.voice-strip {
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.voice-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.voice-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+.btn-deafen {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-deafen:hover { background: rgba(255, 255, 255, 0.15); color: var(--text-main); }
+.btn-deafen.deafened {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: var(--danger);
+  color: #fca5a5;
+}
+.voice-peer-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.voice-peer {
+  padding: 4px 10px;
+  border: 1.5px solid currentColor;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(8px);
+}
+.voice-peer.my-voice {
+  background: rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 10px var(--primary-glow);
+}
+.voice-peer.peer-muted {
+  opacity: 0.55;
+  border-style: dashed;
+}
+.peer-mute-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  cursor: pointer;
+  margin-left: 2px;
+}
+.peer-mute-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
 .chat-stream { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
 .chat-msg { line-height: 1.35; word-break: break-word; }
 .chat-msg .chat-from { font-weight: 700; font-size: 11px; }
@@ -332,11 +406,6 @@ kbd { display: inline-block; padding: 2px 5px; border: 1px solid var(--border-co
   /* Stack: top-bar → scoreboard → arena-workspace → dpad */
   .arena-workspace { flex-direction: column; align-items: center; flex: 1; min-height: 0; }
 
-  /*
-   * Canvas sizing on mobile: square that fits the width.
-   * max-height = 100vw keeps it square on portrait.
-   * On very tall phones the canvas doesn't exceed the screen width.
-   */
   .board-wrap {
     width: 100%;
     max-height: calc(100vw - 8px);
@@ -348,18 +417,69 @@ kbd { display: inline-block; padding: 2px 5px; border: 1px solid var(--border-co
   .chat-panel { position: fixed; bottom: 0; left: 0; right: 0; width: 100%; height: 290px; z-index: 40; border-radius: var(--radius-lg) var(--radius-lg) 0 0; border-top: 2px solid var(--accent); }
   .keyboard-hints { display: none; }
 
-  .dpad-container { display: flex; justify-content: center; align-items: center; padding: 4px 0; flex-shrink: 0; touch-action: none; }
-  .dpad-grid { display: grid; grid-template-areas: ". up ." "left center right" ". down ."; gap: 6px; width: 170px; height: 140px; position: relative; touch-action: none; }
-  .dpad-btn {
-    width: 52px; height: 44px; border-radius: 12px; background: rgba(15, 23, 42, 0.85); border: 1.5px solid rgba(255, 255, 255, 0.12); color: var(--text-main);
-    display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); backdrop-filter: blur(10px);
+  /* Expanded, Comfortable Mobile DPad */
+  .dpad-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 8px 0 12px 0;
+    flex-shrink: 0;
+    touch-action: none;
   }
-  .dpad-btn:active, .dpad-btn.pressed { background: var(--accent); color: #07090e; border-color: var(--accent); transform: scale(0.92); }
+  .dpad-grid {
+    display: grid;
+    grid-template-areas:
+      ". up ."
+      "left center right"
+      ". down .";
+    gap: 12px;
+    width: 220px;
+    height: 160px;
+    position: relative;
+    touch-action: none;
+  }
+  .dpad-btn {
+    width: 66px;
+    height: 52px;
+    border-radius: 16px;
+    background: rgba(15, 23, 42, 0.92);
+    border: 1.5px solid rgba(56, 189, 248, 0.28);
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    transition: transform 0.1s ease, background 0.1s ease, border-color 0.1s ease;
+    touch-action: manipulation;
+  }
+  .dpad-btn svg {
+    width: 26px;
+    height: 26px;
+    pointer-events: none;
+  }
+  .dpad-btn:active, .dpad-btn.pressed {
+    background: var(--accent);
+    color: #07090e;
+    border-color: var(--accent);
+    transform: scale(0.92);
+    box-shadow: 0 0 18px var(--accent-glow);
+  }
   .dpad-btn.up { grid-area: up; justify-self: center; }
   .dpad-btn.down { grid-area: down; justify-self: center; }
   .dpad-btn.left { grid-area: left; align-self: center; }
   .dpad-btn.right { grid-area: right; align-self: center; }
-  .dpad-center { grid-area: center; width: 20px; height: 20px; border-radius: 50%; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); justify-self: center; align-self: center; }
+  .dpad-center {
+    grid-area: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(56, 189, 248, 0.06);
+    border: 1px dashed rgba(56, 189, 248, 0.2);
+    justify-self: center;
+    align-self: center;
+  }
 }
 
 /* Modals */
