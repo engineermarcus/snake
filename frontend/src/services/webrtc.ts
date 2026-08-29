@@ -102,8 +102,11 @@ class WebRTCVoiceService {
       analyser.connect(actx.destination);
       this.analyserNodes[peerId] = analyser;
 
-      this.peers[peerId] = this.peers[peerId] || {};
-      this.peers[peerId].stream = e.streams[0];
+      if (this.peers[peerId]) {
+        this.peers[peerId].stream = e.streams[0];
+      } else {
+        this.peers[peerId] = { pc, stream: e.streams[0] };
+      }
       this.notifyUpdate();
     };
 
@@ -129,9 +132,8 @@ class WebRTCVoiceService {
     try {
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
-        offerToReceiveVideo: false,
-        voiceActivityDetection: true
-      });
+        offerToReceiveVideo: false
+      } as any);
       offer.sdp = this.preferOpus(offer.sdp || '');
       await pc.setLocalDescription(offer);
       socketService.send({ type: 'rtcOffer', to: peerId, sdp: pc.localDescription });

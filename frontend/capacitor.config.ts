@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.snakearena.app',
+  appId: 'com.snake.game',
   appName: 'Snake Arena',
   webDir: 'dist',
   server: {
